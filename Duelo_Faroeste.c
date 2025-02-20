@@ -80,6 +80,12 @@ int num_desenhos2 = sizeof(animacao_2) / sizeof(animacao_2[0]);
 double* animacao_3[] = {frame00, frame01, frame02, frame03, frame04, frame05, frame06, frame07, frame08, frame09};
 int num_desenhos_3 = sizeof(animacao_3) / sizeof(animacao_3[0]);
 
+double* animacao_4[] = {desenho1_1, desenho2_2, desenho3_3, desenho4_4, desenho5_5, desenho6_6, desenho7_7, desenho8_8, desenho9_9, desenho10_10, desenho11_11, desenho12_12, desenho13_13, desenho14_14, desenho15_15};
+int num_desenhos_4 = sizeof(animacao_4) / sizeof(animacao_4[0]);
+
+double* animacao_5[] = {quadro0, quadro1, quadro2, quadro3, quadro4, quadro5, quadro6, quadro7, quadro8, quadro9, quadro10, quadro11, quadro12, quadro13, quadro14, quadro15, quadro16};
+int num_desenhos_5 = sizeof(animacao_5) / sizeof(animacao_5[0]);
+
 void executar_animacao(int animacao_idx, uint32_t valor_led, PIO pio, uint sm) {
     switch (animacao_idx) {
         
@@ -94,7 +100,13 @@ void executar_animacao(int animacao_idx, uint32_t valor_led, PIO pio, uint sm) {
             break;
         case 3:
             exibir_animacao(animacao_3, num_desenhos_3, valor_led, pio, sm);
-            break;             
+            break;   
+        case 4:
+            exibir_animacao(animacao_4, num_desenhos_4, valor_led, pio, sm);
+            break;
+        case 5:
+            exibir_animacao(animacao_5, num_desenhos_5, valor_led, pio, sm);
+            break;          
         default:
             printf("Animação inválida\n");
     }
@@ -110,6 +122,7 @@ static void gpio_irq_handler(uint gpio, uint32_t events) {
         last_press_time_0 = current_time; // Atualiza o tempo do último acionamento
         display_message_type = 1;           // Código para "Botão A pressionado"
         display_update_flag = true;
+        animacao_atual = 4;
         
     } 
     else if(gpio == button_1)
@@ -118,6 +131,8 @@ static void gpio_irq_handler(uint gpio, uint32_t events) {
         last_press_time_0 = current_time; 
         display_message_type = 2;           // Código para "Botão B pressionado"
         display_update_flag = true;
+        animacao_atual = 5;
+        
         
        
     }
