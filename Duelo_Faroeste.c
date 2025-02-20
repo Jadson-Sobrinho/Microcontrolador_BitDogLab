@@ -25,76 +25,60 @@
 #include <ctype.h>
 #include <string.h>
 
-// SPI Defines
-// We are going to use SPI 0, and allocate it to the following GPIO pins
-// Pins can be changed, see the GPIO function select table in the datasheet for information on GPIO assignments
-#define SPI_PORT spi0
-#define PIN_MISO 16
-#define PIN_CS   17
-#define PIN_SCK  18
-#define PIN_MOSI 19
+#define DEBOUNCE_TIME_MS 200  // Tempo mínimo entre leituras válidas
+#define OUT_PINO 7
 
-// I2C defines
-// This example will use I2C0 on GPIO8 (SDA) and GPIO9 (SCL) running at 400KHz.
-// Pins can be changed, see the GPIO function select table in the datasheet for information on GPIO assignments
-#define I2C_PORT i2c0
-#define I2C_SDA 8
-#define I2C_SCL 9
+//botão de interupção
+const uint button_0 = 5;
+const uint button_1 = 6;
 
-// UART defines
-// By default the stdout UART is `uart0`, so we will use the second one
-#define UART_ID uart1
-#define BAUD_RATE 115200
-
-// Use pins 4 and 5 for UART1
-// Pins can be changed, see the GPIO function select table in the datasheet for information on GPIO assignments
-#define UART_TX_PIN 4
-#define UART_RX_PIN 5
+uint32_t last_press_time_0 = 0;  // Última ativação do botão_0
+uint32_t last_press_time_1 = 0;  // Última ativação do botão_1
 
 
+
+// Interrupção do botão para ativar/desativar animação
+static void gpio_irq_handler(uint gpio, uint32_t events) {
+    uint32_t current_time = to_ms_since_boot(get_absolute_time()); // Obtém o tempo atual em ms
+
+    if (gpio == button_0)
+    {
+        if (current_time - last_press_time_0 < DEBOUNCE_TIME_MS) return; // Ignora se estiver dentro do tempo de debounce
+        last_press_time_0 = current_time; // Atualiza o tempo do último acionamento
+    } 
+    else 
+    {
+        
+       
+    }
+
+}
 
 int main()
 {
+    PIO pio = pio0;
+    uint32_t valor_led = 0;
+    double r = 0.0, b = 0.0, g = 0.0;
+
+    set_sys_clock_khz(128000, false);
     stdio_init_all();
 
-    // SPI initialisation. This example will use SPI at 1MHz.
-    spi_init(SPI_PORT, 1000*1000);
-    gpio_set_function(PIN_MISO, GPIO_FUNC_SPI);
-    gpio_set_function(PIN_CS,   GPIO_FUNC_SIO);
-    gpio_set_function(PIN_SCK,  GPIO_FUNC_SPI);
-    gpio_set_function(PIN_MOSI, GPIO_FUNC_SPI);
-    
-    // Chip select is active-low, so we'll initialise it to a driven-high state
-    gpio_set_dir(PIN_CS, GPIO_OUT);
-    gpio_put(PIN_CS, 1);
-    // For more examples of SPI use see https://github.com/raspberrypi/pico-examples/tree/master/spi
+    // Configurar interrupção no botão
+    gpio_set_irq_enabled_with_callback(button_0, GPIO_IRQ_EDGE_FALL, true, &gpio_irq_handler);
+    gpio_set_irq_enabled(button_1, GPIO_IRQ_EDGE_FALL, true);
 
-    // I2C Initialisation. Using it at 400Khz.
-    i2c_init(I2C_PORT, 400*1000);
-    
-    gpio_set_function(I2C_SDA, GPIO_FUNC_I2C);
-    gpio_set_function(I2C_SCL, GPIO_FUNC_I2C);
-    gpio_pull_up(I2C_SDA);
-    gpio_pull_up(I2C_SCL);
-    // For more examples of I2C use see https://github.com/raspberrypi/pico-examples/tree/master/i2c
+    //inicializar o botão de interrupção - GPIO5
+    gpio_init(button_0);
+    gpio_set_dir(button_0, GPIO_IN);
+    gpio_pull_up(button_0);
 
-    // Set up our UART
-    uart_init(UART_ID, BAUD_RATE);
-    // Set the TX and RX pins by using the function select on the GPIO
-    // Set datasheet for more information on function select
-    gpio_set_function(UART_TX_PIN, GPIO_FUNC_UART);
-    gpio_set_function(UART_RX_PIN, GPIO_FUNC_UART);
-    
-    // Use some the various UART functions to send out data
-    // In a default system, printf will also output via the default UART
-    
-    // Send out a string, with CR/LF conversions
-    uart_puts(UART_ID, " Hello, UART!\n");
-    
-    // For more examples of UART use see https://github.com/raspberrypi/pico-examples/tree/master/uart
+    //inicializar o botão de interrupção - GPIO6
+    gpio_init(button_1);
+    gpio_set_dir(button_1, GPIO_IN);
+    gpio_pull_up(button_1);
 
-    while (true) {
-        printf("Hello, world!\n");
-        sleep_ms(1000);
-    }
+    uint offset = pio_add_program(pio, &pio_matrix_program);
+    uint sm = pio_claim_unused_sm(pio, true);
+    pio_matrix_program_init(pio, sm, offset, OUT_PINO);    
+
 }
