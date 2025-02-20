@@ -43,10 +43,6 @@ add_executable(Duelo_Faroeste Duelo_Faroeste.c
         ./lib/animacao_3.c 
         ./lib/animacao_4.c 
         ./lib/animacao_5.c 
-        ./lib/animacao_6.c
-        ./lib/animacao_7.c 
-        ./lib/animacao_8.c
-        ./lib/animacao_9.c
 
 )
 
