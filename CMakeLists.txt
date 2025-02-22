@@ -41,8 +41,6 @@ add_executable(Duelo_Faroeste Duelo_Faroeste.c
         ./lib/animacao_1.c 
         ./lib/animacao_2.c
         ./lib/animacao_3.c 
-        ./lib/animacao_4.c 
-        ./lib/animacao_5.c 
 
 )
 
@@ -64,6 +62,7 @@ target_link_libraries(Duelo_Faroeste
         hardware_pio
         hardware_adc
         hardware_i2c
+        hardware_pwm
         )
 
 # Add the standard include files to the build
