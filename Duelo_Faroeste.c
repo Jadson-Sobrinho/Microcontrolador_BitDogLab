@@ -15,6 +15,7 @@
 #include "inc/ssd1306_font.h"
 #include "hardware/i2c.h"
 #include <string.h>
+#include "hardware/pwm.h"
 
 #define DEBOUNCE_TIME_MS 50  // Tempo mínimo entre leituras válidas
 #define OUT_PINO 7
@@ -23,6 +24,10 @@
 // Botões de interrupção
 const uint button_0 = 5;
 const uint button_1 = 6;
+
+//Buzzer
+const uint buzzer_0 = 21;
+const uint buzzer_1 = 10;
 
 uint32_t last_press_time_0 = 0;  
 uint32_t last_press_time_1 = 0;  
@@ -175,6 +180,22 @@ static void gpio_irq_handler(uint gpio, uint32_t events) {
     }
 }
 
+void set_buzzer_frequency(uint buzzer_pin, uint frequency) {
+    uint slice = pwm_gpio_to_slice_num(buzzer_pin);
+    uint clock_divider = 4.0f;  // Define a divisão do clock (ajuste conforme necessário)
+    uint wrap_value = clock_get_hz(clk_sys) / (clock_divider * frequency);
+
+    pwm_set_clkdiv(slice, clock_divider);
+    pwm_set_wrap(slice, wrap_value);
+    pwm_set_chan_level(slice, pwm_gpio_to_channel(buzzer_pin), wrap_value / 2);
+    pwm_set_enabled(slice, true);
+}
+
+void buzzer_off(uint buzzer_pin) {
+    uint slice = pwm_gpio_to_slice_num(buzzer_pin);
+    pwm_set_enabled(slice, false); // Desliga o PWM
+}
+
 int main() {
     set_sys_clock_khz(128000, false);
     stdio_init_all();
@@ -219,6 +240,20 @@ int main() {
     memset(ssd, 0, ssd1306_buffer_length);
     render_on_display(ssd, &frame_area);
 
+    //Inicialização dos buzzers
+    gpio_init(buzzer_0);
+    gpio_init(buzzer_1);
+
+    //Definir buzzer como saida
+    gpio_set_dir(buzzer_0, GPIO_OUT);
+    gpio_set_dir(buzzer_1, GPIO_OUT);
+
+    //Configura a frequencia do buzzer
+    gpio_set_function(buzzer_0, GPIO_FUNC_PWM);
+    gpio_set_function(buzzer_1, GPIO_FUNC_PWM);
+
+
+
     while (true) {
         // Reinicia o estado do jogo
         signal_active = false;
@@ -227,6 +262,8 @@ int main() {
         player2Won = false;
         animacao_atual = 3;
         isInCount = true;
+        buzzer_off(buzzer_0);
+        buzzer_off(buzzer_1);
 
         // Contagem regressiva com animação
         for (int i = 3; i >= 0; i--) {
@@ -238,6 +275,10 @@ int main() {
         }
         isInCount = false;
         signal_active = true;
+
+        set_buzzer_frequency(buzzer_0, 100);
+        set_buzzer_frequency(buzzer_1, 100);
+
 
         // Aguarda até que um jogador dispare (se ainda não foi registrado)
         while (!game_over) {
@@ -265,3 +306,4 @@ int main() {
     
     return 0;
 }
+
