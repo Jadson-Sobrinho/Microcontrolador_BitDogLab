@@ -7,8 +7,6 @@
 #include "lib/animacao_1.h"
 #include "lib/animacao_2.h"
 #include "lib/animacao_3.h"
-#include "lib/animacao_4.h"
-#include "lib/animacao_5.h"
 #include "pio_matrix.pio.h"
 #include "pico/binary_info.h"
 #include "inc/ssd1306.h"
@@ -99,12 +97,6 @@ int num_desenhos2 = sizeof(animacao_2) / sizeof(animacao_2[0]);
 double* animacao_3[] = {frame00, frame01, frame02, frame03, frame04, frame05, frame06, frame07, frame08, frame09};
 int num_desenhos_3 = sizeof(animacao_3) / sizeof(animacao_3[0]);
 
-double* animacao_4[] = {desenho1_1, desenho2_2, desenho3_3, desenho4_4, desenho5_5, desenho6_6, desenho7_7};
-int num_desenhos_4 = sizeof(animacao_4) / sizeof(animacao_4[0]);
-
-double* animacao_5[] = {quadro0, quadro1, quadro2, quadro3, quadro4, quadro5};
-int num_desenhos_5 = sizeof(animacao_5) / sizeof(animacao_5[0]);
-
 void executar_animacao(int animacao_idx, uint32_t valor_led, PIO pio, uint sm) {
     switch (animacao_idx) {
         case 0:
@@ -118,13 +110,7 @@ void executar_animacao(int animacao_idx, uint32_t valor_led, PIO pio, uint sm) {
             break;
         case 3:
             exibir_animacao(animacao_3, num_desenhos_3, valor_led, pio, sm);
-            break;   
-        case 4:
-            exibir_animacao(animacao_4, num_desenhos_4, valor_led, pio, sm);
-            break;
-        case 5:
-            exibir_animacao(animacao_5, num_desenhos_5, valor_led, pio, sm);
-            break;          
+            break;           
         default:
             printf("Animação inválida\n");
     }
@@ -140,7 +126,6 @@ static void gpio_irq_handler(uint gpio, uint32_t events) {
        
         if (!signal_active && isInCount) {
             // Player 1 apertou cedo – ele perde; Player 2 vence
-            animacao_atual = 4;
             display_message_type = 3;
             display_update_flag = true;
             player1Won = false;
@@ -148,7 +133,6 @@ static void gpio_irq_handler(uint gpio, uint32_t events) {
             game_over = true;
         } else {
             // Disparo correto: Player 1 vence
-            animacao_atual = 5;
             display_message_type = 1;
             display_update_flag = true;
             player1Won = true;
@@ -162,7 +146,6 @@ static void gpio_irq_handler(uint gpio, uint32_t events) {
 
         if (!signal_active && isInCount) {
             // Player 2 apertou cedo – ele perde; Player 1 vence
-            animacao_atual = 5;
             display_message_type = 4;
             display_update_flag = true;
             player1Won = true;
@@ -170,7 +153,6 @@ static void gpio_irq_handler(uint gpio, uint32_t events) {
             game_over = true;
         } else {
             // Disparo correto: Player 2 vence
-            animacao_atual = 4;
             display_message_type = 2;
             display_update_flag = true;
             player1Won = false;
@@ -278,6 +260,9 @@ int main() {
 
         set_buzzer_frequency(buzzer_0, 100);
         set_buzzer_frequency(buzzer_1, 100);
+        sleep_ms(100);
+        buzzer_off(buzzer_0);
+        buzzer_off(buzzer_1);
 
 
         // Aguarda até que um jogador dispare (se ainda não foi registrado)
