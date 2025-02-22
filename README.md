@@ -55,6 +55,3 @@ Desliga o buzzer desativando o PWM.
    - Atualiza o display com o vencedor ou penaliza um jogador caso tenha disparado cedo.
    - Repete o processo após um pequeno delay.
 
-## Considerações Finais
-O jogo implementa um mecanismo simples de reflexo e pode ser expandido para incluir mais efeitos visuais e sonoros. A adição de um cronômetro para medir tempos de resposta pode ser um aprimoramento futuro.
-
