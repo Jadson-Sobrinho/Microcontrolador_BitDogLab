@@ -20,14 +20,14 @@
 #define OUT_PINO 7
 #define NUMERO_DE_LEDS 25
 
-//botão de interupção
+// Botões de interrupção
 const uint button_0 = 5;
 const uint button_1 = 6;
 
-uint32_t last_press_time_0 = 0;  // Última ativação do botão_0
-uint32_t last_press_time_1 = 0;  // Última ativação do botão_1
+uint32_t last_press_time_0 = 0;  
+uint32_t last_press_time_1 = 0;  
 
-//Display OLED
+// Display OLED
 const uint I2C_SDA = 14;
 const uint I2C_SCL = 15;
 
@@ -50,44 +50,39 @@ volatile bool signal_active = false;
 // game_over indica que um jogador já disparou (válido ou antecipado)
 volatile bool game_over = false;
 
+uint32_t valor_led = 0;
+PIO pio = pio0;
+uint sm;
 
 // Função para gerar cores RGB para matriz de LEDs
 uint32_t matrix_rgb(double r, double g, double b) {
     return ((int)(g * 255) << 24) | ((int)(r * 255) << 16) | ((int)(b * 255) << 8);
 }
 
-
-
 // Atualiza os LEDs da matriz
 void desenho_pio(double *desenho, uint32_t valor_led, PIO pio, uint sm) {
     for (int i = 0; i < NUMERO_DE_LEDS; i++) {
-
-        if (player1Won)
-        {
+        if (player1Won) {
             valor_led = matrix_rgb(desenho[24 - i], 0, 0);
-        } else if (player2Won)
-        {
+        } else if (player2Won) {
             valor_led = matrix_rgb(0, 0, desenho[24 - i]);
-        }
-        else
-        {
+        } else {
             valor_led = matrix_rgb(desenho[24 - i], desenho[24 - i], desenho[24 - i]);
         }
-
         pio_sm_put_blocking(pio, sm, valor_led);
     }
 }
 
-// Exibe animação caso ativada
+// Exibe animação caso ativada – interrompe se o jogo acabar
 void exibir_animacao(double* animacao[], int num_desenhos, uint32_t valor_led, PIO pio, uint sm) {
     for (int i = 0; i < num_desenhos; i++) {
+        if (game_over) break;  // Para a animação se um botão já tiver sido pressionado
         desenho_pio(animacao[i], valor_led, pio, sm);
         sleep_ms(100);
     }
 }
 
-
-double* animacao_0[] = {desenho1, desenho2, desenho3, desenho4, desenho5, desenho6, desenho7, desenho8, desenho9};
+double* animacao_0[] = {desenho1, desenho2, desenho3, desenho4};
 int num_desenhos = sizeof(animacao_0) / sizeof(animacao_0[0]);
 
 double* animacao_1[] = {frame_1_1, frame_1_2, frame_1_3, frame_1_4, frame_1_5, frame_1_6, frame_1_7};
@@ -107,7 +102,6 @@ int num_desenhos_5 = sizeof(animacao_5) / sizeof(animacao_5[0]);
 
 void executar_animacao(int animacao_idx, uint32_t valor_led, PIO pio, uint sm) {
     switch (animacao_idx) {
-        
         case 0:
             exibir_animacao(animacao_0, num_desenhos, valor_led, pio, sm);
             break;
@@ -131,105 +125,85 @@ void executar_animacao(int animacao_idx, uint32_t valor_led, PIO pio, uint sm) {
     }
 }
 
-// Interrupção do botão
+// Interrupção dos botões
 static void gpio_irq_handler(uint gpio, uint32_t events) {
-    uint32_t current_time = to_ms_since_boot(get_absolute_time()); // Obtém o tempo atual em ms
-    animacao_atual = 3;
+    uint32_t current_time = to_ms_since_boot(get_absolute_time());
     
-    if (gpio == button_0)
-    {
-        
-        if (current_time - last_press_time_0 < DEBOUNCE_TIME_MS) return; // Ignora se estiver dentro do tempo de debounce
-        
-        last_press_time_0 = current_time; // Atualiza o tempo do último acionamento
+    if (gpio == button_0) {
+        if (current_time - last_press_time_0 < DEBOUNCE_TIME_MS) return;
+        last_press_time_0 = current_time;
        
-        if (!signal_active) {
-            // Player 1 disparou cedo – ele perde; logo, Player 2 vence
+        if (!signal_active && isInCount) {
+            // Player 1 apertou cedo – ele perde; Player 2 vence
+            animacao_atual = 4;
             display_message_type = 3;
             display_update_flag = true;
             player1Won = false;
             player2Won = true;
-            animacao_atual = 4;
+            game_over = true;
         } else {
             // Disparo correto: Player 1 vence
+            animacao_atual = 5;
             display_message_type = 1;
             display_update_flag = true;
             player1Won = true;
             player2Won = false;
-            animacao_atual = 5;
+            game_over = true;
         }
-
-        game_over = true;
-        display_update_flag = true;
-           
     } 
-    else if(gpio == button_1)
-    {
-        if (current_time - last_press_time_0 < DEBOUNCE_TIME_MS) return; 
-        
-        last_press_time_0 = current_time; 
+    else if(gpio == button_1) {
+        if (current_time - last_press_time_1 < DEBOUNCE_TIME_MS) return;
+        last_press_time_1 = current_time;
 
-        if (!signal_active) {
-            // Player 2 disparou cedo – ele perde; portanto, Player 1 vence
+        if (!signal_active && isInCount) {
+            // Player 2 apertou cedo – ele perde; Player 1 vence
+            animacao_atual = 5;
             display_message_type = 4;
             display_update_flag = true;
             player1Won = true;
             player2Won = false;
-            animacao_atual = 5;
-
+            game_over = true;
         } else {
-
+            // Disparo correto: Player 2 vence
+            animacao_atual = 4;
             display_message_type = 2;
             display_update_flag = true;
             player1Won = false;
             player2Won = true;
-            animacao_atual = 4;
-    
+            game_over = true;
         }
-        game_over = true;
-        display_update_flag = true;
-
-        
     }
-
-
 }
 
-int main()
-{
-    PIO pio = pio0;
-    uint32_t valor_led = 0;
-
+int main() {
     set_sys_clock_khz(128000, false);
     stdio_init_all();
-
-    //inicializar o botão de interrupção - GPIO5
-    gpio_init(button_0);
-    gpio_set_dir(button_0, GPIO_IN);
-    gpio_pull_up(button_0);
-
-    //inicializar o botão de interrupção - GPIO6
-    gpio_init(button_1);
-    gpio_set_dir(button_1, GPIO_IN);
-    gpio_pull_up(button_1);
-
-    // Configurar interrupção no botão
-    gpio_set_irq_enabled_with_callback(button_0, GPIO_IRQ_EDGE_FALL, true, &gpio_irq_handler);
-    gpio_set_irq_enabled_with_callback(button_1, GPIO_IRQ_EDGE_FALL, true, &gpio_irq_handler);
 
     uint offset = pio_add_program(pio, &pio_matrix_program);
     uint sm = pio_claim_unused_sm(pio, true);
     pio_matrix_program_init(pio, sm, offset, OUT_PINO);
-    
 
-    // Inicialização do i2c
+    // Inicializa os botões de interrupção
+    gpio_init(button_0);
+    gpio_set_dir(button_0, GPIO_IN);
+    gpio_pull_up(button_0);
+
+    gpio_init(button_1);
+    gpio_set_dir(button_1, GPIO_IN);
+    gpio_pull_up(button_1);
+
+    // Configura interrupção para os botões
+    gpio_set_irq_enabled_with_callback(button_0, GPIO_IRQ_EDGE_FALL, true, &gpio_irq_handler);
+    gpio_set_irq_enabled_with_callback(button_1, GPIO_IRQ_EDGE_FALL, true, &gpio_irq_handler);
+
+    // Inicialização do I2C para o display OLED
     i2c_init(i2c1, ssd1306_i2c_clock * 1000);
     gpio_set_function(I2C_SDA, GPIO_FUNC_I2C);
     gpio_set_function(I2C_SCL, GPIO_FUNC_I2C);
     gpio_pull_up(I2C_SDA);
     gpio_pull_up(I2C_SCL);
 
-    // Inicialização completo do OLED SSD1306
+    // Inicialização completa do display SSD1306
     ssd1306_init();
     
     // Configura a área de renderização do display
@@ -241,7 +215,6 @@ int main()
     };
     calculate_render_area_buffer_length(&frame_area);
 
-    // Cria um buffer para o display e limpa o display
     uint8_t ssd[ssd1306_buffer_length];
     memset(ssd, 0, ssd1306_buffer_length);
     render_on_display(ssd, &frame_area);
@@ -252,52 +225,43 @@ int main()
         game_over = false;
         player1Won = false;
         player2Won = false;
-        display_update_flag = false;
         animacao_atual = 3;
-
-
-        // Executa a animação antes de verificar se o display precisa ser atualizado
         isInCount = true;
+
+        // Contagem regressiva com animação
         for (int i = 3; i >= 0; i--) {
+            if (game_over) break;  // Interrompe se um disparo já foi efetuado
             animacao_ativa = true;
             executar_animacao(animacao_atual, valor_led, pio, sm);
             sleep_ms(1000);
             animacao_atual--;    
         }
         isInCount = false;
-
         signal_active = true;
 
+        // Aguarda até que um jogador dispare (se ainda não foi registrado)
         while (!game_over) {
             sleep_ms(10);
         }
 
-        // Se a flag de atualização do display estiver setada, exibe a mensagem correspondente
+        // Atualiza o display com a mensagem correspondente
         if (display_update_flag) {
-            memset(ssd, 0, ssd1306_buffer_length); // Limpa o display apenas quando necessário
-            
-            if (display_message_type == 1) 
-            {
+            memset(ssd, 0, ssd1306_buffer_length);
+            if (display_message_type == 1) {
                 ssd1306_draw_string(ssd, 5, 0, "Player 1 Venceu");
-            } 
-            else if (display_message_type == 2) 
-            {
+            } else if (display_message_type == 2) {
                 ssd1306_draw_string(ssd, 5, 0, "Player 2 Venceu");
-            } else if (display_message_type == 3)
-            {
-                ssd1306_draw_string(ssd, 5, 0, "P1 Perdeu");
-
-            } else if (display_message_type == 4) 
-            {
-                ssd1306_draw_string(ssd, 5, 0, "P2 Perdeu");
+            } else if (display_message_type == 3) {
+                ssd1306_draw_string(ssd, 5, 0, "P1 tiro cedo");
+            } else if (display_message_type == 4) {
+                ssd1306_draw_string(ssd, 5, 0, "P2 tiro cedo");
             }
-            
-    
-            render_on_display(ssd, &frame_area);  // Atualiza o display apenas quando necessário
-            display_update_flag = false; // Reseta a flag para evitar atualizações repetidas
+            render_on_display(ssd, &frame_area);
+            display_update_flag = false;
         }
     
-        sleep_ms(100);  // Pequena pausa para evitar alto consumo de CPU
+        sleep_ms(100);  // Pausa breve antes de reiniciar o jogo
     }
     
+    return 0;
 }
